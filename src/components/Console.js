@@ -1,111 +1,62 @@
-// src/Console.js
-import React, { useRef, useEffect, useState } from 'react';
-import * as monaco from 'monaco-editor';
-import 'monaco-editor/esm/vs/editor/editor.all.js';
+// editor/src/components/Console.js
+import React, { useEffect, useRef, useState } from 'react';
+import './Console.css';
 
-const Console = ({ logs = [] }) => {
-    const consoleContainerRef = useRef(null);
-    const [editorInstance, setEditorInstance] = useState(null);
+const Console = ({ logs }) => {
+    const consoleRef = useRef(null);
+    const [visibleLogs, setVisibleLogs] = useState([]);
 
-    // Console editor options
-    const editorOptions = {
-        readOnly: true,
-        automaticLayout: true,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        lineNumbers: 'off',
-        renderLineHighlight: 'none',
-        fontSize: 13,
-        wordWrap: 'on',
-        contextmenu: false,
-        folding: false,
-        renderIndentGuides: false,
-    };
-
-    // Format logs for display
-    const getConsoleContent = () => {
-        return logs.map(log => {
-            if (log.type === 'error') {
-                return `// ERROR: ${log.message}`;
-            } else if (log.type === 'warning') {
-                return `// WARNING: ${log.message}`;
-            } else if (log.type === 'success') {
-                return `// SUCCESS: ${log.message}`;
-            } else {
-                return `// INFO: ${log.message}`;
-            }
-        }).join('\n');
-    };
-
-    // Create editor on component mount
+    // Add timestamp to logs
     useEffect(() => {
-        if (consoleContainerRef.current && !editorInstance) {
-            // Define console theme
-            monaco.editor.defineTheme('consoleTheme', {
-                base: 'vs-dark',
-                inherit: true,
-                rules: [
-                    { token: 'comment', foreground: '6A9955' },
-                    { token: 'string', foreground: 'CE9178' },
-                    { token: 'keyword', foreground: '569CD6' },
-                    { token: 'number', foreground: 'B5CEA8' },
-                    { token: 'error', foreground: 'F44747' },
-                    { token: 'warning', foreground: 'FF8C00' },
-                    { token: 'info', foreground: '4FC1FF' },
-                ],
-                colors: {
-                    'editor.background': '#1E1E1E',
-                    'editor.foreground': '#D4D4D4',
-                }
-            });
+        if (logs.length > 0) {
+            const lastLog = logs[logs.length - 1];
 
-            // Create editor
-            const content = getConsoleContent();
-            const editor = monaco.editor.create(consoleContainerRef.current, {
-                ...editorOptions,
-                value: content,
-                language: 'javascript',
-                theme: 'consoleTheme'
-            });
-
-            setEditorInstance(editor);
-
-            // Scroll to bottom if there are logs
-            if (logs.length > 0) {
-                const model = editor.getModel();
-                if (model) {
-                    const lineCount = model.getLineCount();
-                    editor.revealLine(lineCount);
-                }
-            }
-
-            // Cleanup on unmount
-            return () => {
-                editor.dispose();
-            };
-        }
-    }, [consoleContainerRef]);
-
-    // Update content when logs change
-    useEffect(() => {
-        if (editorInstance) {
-            const content = getConsoleContent();
-            editorInstance.setValue(content);
-
-            // Scroll to bottom
-            const model = editorInstance.getModel();
-            if (model) {
-                const lineCount = model.getLineCount();
-                editorInstance.revealLine(lineCount);
+            // Check if the log already has a timestamp
+            if (!lastLog.timestamp) {
+                setVisibleLogs(prevLogs => [
+                    ...prevLogs,
+                    {
+                        ...lastLog,
+                        timestamp: new Date().toISOString()
+                    }
+                ]);
             }
         }
-    }, [logs, editorInstance]);
+    }, [logs]);
+
+    // Auto-scroll to bottom when new logs are added
+    useEffect(() => {
+        if (consoleRef.current) {
+            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+        }
+    }, [visibleLogs]);
+
+    const handleClear = () => {
+        setVisibleLogs([]);
+    };
 
     return (
-        <div
-            ref={consoleContainerRef}
-            style={{ height: '100%', minHeight: '200px' }}
-        />
+        <div className="console-container">
+            <div className="console-header">
+                <h3>Console</h3>
+                <button className="clear-button" onClick={handleClear}>Clear</button>
+            </div>
+
+            <div className="console-output" ref={consoleRef}>
+                {visibleLogs.map((log, index) => {
+                    const timestamp = log.timestamp
+                        ? new Date(log.timestamp).toLocaleTimeString()
+                        : '';
+
+                    return (
+                        <div key={index} className={`log-entry ${log.type}`}>
+                            <span className="log-timestamp">[{timestamp}]</span>
+                            <span className="log-message">{log.message}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
     );
 };
 

@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-alpine as build
 
 WORKDIR /app
 
@@ -9,16 +9,29 @@ COPY package.json package-lock.json* ./
 RUN npm install
 
 # Copy source files
-COPY ../docker .
+COPY . .
 
-# Create logs and temp directories
-RUN mkdir -p logs temp dist
-
-# Build the frontend
+# Build React app
 RUN npm run build
 
-# Create shared directory if it doesn't exist
-RUN mkdir -p ../shared
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy built files from build stage
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.js ./
+COPY --from=build /app/package.json ./
+
+# Install only production dependencies
+RUN npm install --production
+
+# Set environment variables
+ENV PORT=80
+ENV NODE_ENV=production
+ENV PREVIEW_URL=http://preview:3010
+ENV CODEBASE_URL=http://codebase:3020
 
 # Expose port
 EXPOSE 80

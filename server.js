@@ -1,155 +1,101 @@
-// edit/server.js - Serwer dla aplikacji edytora
+// editor/server.js
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
 const path = require('path');
-const fs = require('fs');
-const { exec } = require('child_process');
-const bodyParser = require('body-parser');
+const socketIo = require('socket.io');
 const cors = require('cors');
+const bodyParser = require('body-parser');
+const axios = require('axios');
 require('dotenv').config();
 
-// Konfiguracja ścieżek
-const SHARED_DIR = path.join(__dirname, '.', 'public');
-const PREVIEW_SERVER_DIR = path.join(__dirname, '..', 'preview');
-
-// Stałe konfiguracyjne
-const PREVIEW_PORT = process.env.PREVIEW_PORT || 3010;
-const EDITOR_PORT = process.env.EDITOR_PORT || 80;
+// Constants
+const PORT = process.env.PORT || 80;
+const PREVIEW_URL = process.env.PREVIEW_URL || 'http://localhost:3010';
+const CODEBASE_URL = process.env.CODEBASE_URL || 'http://localhost:3020';
 
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: '*',
     methods: ['GET', 'POST']
   }
 });
 
 // Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  methods: ['GET', 'POST']
-}));
-
-// Włącz parsowanie JSON i ustaw odpowiedni limit wielkości
+app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'dist')));
 
-// Dodaj własny middleware do obsługi błędów JSON
-app.use((err, req, res, next) => {
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    console.error('JSON parsing error:', err);
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid JSON in request body'
+// Proxy endpoints to codebase service
+app.use('/api', async (req, res) => {
+  try {
+    const url = `${CODEBASE_URL}${req.url}`;
+    const method = req.method.toLowerCase();
+
+    // Forward request to codebase service
+    const response = await axios({
+      method,
+      url,
+      data: method !== 'get' ? req.body : undefined,
+      headers: {
+        ...req.headers,
+        host: new URL(CODEBASE_URL).host
+      },
+      withCredentials: true,
+      // Pass cookies for session tracking
+      headers: {
+        'Cookie': req.headers.cookie || ''
+      }
     });
+
+    // Set headers
+    Object.entries(response.headers).forEach(([key, value]) => {
+      res.set(key, value);
+    });
+
+    // Set cookies if any are returned
+    if (response.headers['set-cookie']) {
+      res.set('set-cookie', response.headers['set-cookie']);
+    }
+
+    // Send response
+    res.status(response.status).send(response.data);
+  } catch (error) {
+    console.error(`API proxy error: ${error.message}`);
+
+    // Forward error response if available
+    if (error.response) {
+      res.status(error.response.status).send(error.response.data);
+    } else {
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
   }
-  next();
 });
 
-// Serwuj pliki statyczne
-app.use(express.static(path.join(__dirname, 'dist')));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Temporary file storage
-const TEMP_DIR = process.env.TEMP_DIR || path.join(__dirname, 'temp');
-if (!fs.existsSync(TEMP_DIR)) {
-  fs.mkdirSync(TEMP_DIR);
-}
-
-// Logs directory
-const LOGS_DIR = process.env.LOGS_DIR || path.join(__dirname, 'logs');
-if (!fs.existsSync(LOGS_DIR)) {
-  fs.mkdirSync(LOGS_DIR);
-}
-
-// Funkcja do zarządzania serwerem podglądu
-let previewServerProcess = null;
-
-// Funkcja do uruchamiania serwera podglądu
-function startPreviewServer(componentPath) {
-  // Zatrzymaj istniejący proces podglądu jeśli istnieje
-  if (previewServerProcess) {
-    try {
-      previewServerProcess.kill();
-      console.log('[INFO] Stopped existing preview server');
-    } catch (error) {
-      console.error('[ERROR] Error stopping existing preview server:', error);
-    }
-  }
-
-  // Pełna ścieżka do komponentu
-  const fullComponentPath = path.resolve(componentPath);
-  console.log(`[INFO] Starting preview server for ${fullComponentPath} on port ${PREVIEW_PORT}...`);
-
-  // Uruchom preview-server.js z folderu preview
-  const previewServerPath = path.join(PREVIEW_SERVER_DIR, 'preview-server.js');
-
-  if (fs.existsSync(previewServerPath)) {
-    try {
-      previewServerProcess = exec(
-          `node ${previewServerPath} ${fullComponentPath} --port=${PREVIEW_PORT}`,
-          (error, stdout, stderr) => {
-            if (error) {
-              console.error('[ERROR] Error in preview server process:', error);
-            }
-          }
-      );
-
-      // Loguj output z procesu
-      previewServerProcess.stdout.on('data', (data) => {
-        console.log(`[PREVIEW] ${data.trim()}`);
-      });
-
-      previewServerProcess.stderr.on('data', (data) => {
-        console.error(`[PREVIEW ERROR] ${data.trim()}`);
-      });
-
-      previewServerProcess.on('close', (code) => {
-        console.log(`[INFO] Preview server exited with code ${code}`);
-      });
-
-      return true;
-    } catch (error) {
-      console.error('[ERROR] Failed to start preview server:', error);
-      return false;
-    }
-  } else {
-    console.error(`[ERROR] Preview server script not found: ${previewServerPath}`);
-    return false;
-  }
-}
-
-// Uruchom serwer podglądu dla przykładowego komponentu
-const exampleComponentPath = path.join(SHARED_DIR, 'example.js');
-if (fs.existsSync(exampleComponentPath)) {
-  startPreviewServer(exampleComponentPath);
-} else {
-  console.warn(`[WARN] Example component not found: ${exampleComponentPath}`);
-}
-
-// Socket.IO connection
+// Socket.IO connections
 io.on('connection', (socket) => {
-  console.log('[INFO] Client connected');
+  console.log('Client connected');
 
-  // Handle code update and preview request
-  socket.on('update-code', (code) => {
+  // Handle code update
+  socket.on('code-update', async (data) => {
     try {
-      const tempFile = path.join(SHARED_DIR, 'example.js');
+      const { projectId, filePath, code } = data;
 
-      // Save code to file
-      fs.writeFileSync(tempFile, code);
-
-      // Inform client
-      socket.emit('code-updated', {
-        success: true,
-        message: 'Code updated successfully'
+      // Save file via API
+      await axios.put(`${CODEBASE_URL}/api/files/${projectId}/${filePath}`, {
+        content: code,
+        commitMessage: `Update ${filePath} via socket`
       });
 
-      // No need to restart preview server as it watches the file for changes
+      socket.emit('code-saved', {
+        success: true,
+        message: 'Code saved successfully'
+      });
     } catch (error) {
-      socket.emit('code-updated', {
+      console.error(`Error saving code: ${error.message}`);
+      socket.emit('code-saved', {
         success: false,
         error: error.message
       });
@@ -157,106 +103,27 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('[INFO] Client disconnected');
+    console.log('Client disconnected');
   });
 });
 
-// API endpoints
-// ------------------------------------------------------------
-
-// Get example file
-app.get('/api/example', (req, res) => {
-  const filePath = path.join(SHARED_DIR, 'example.js');
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      console.error('Failed to read file:', err);
-      return res.status(500).send('Failed to read example file');
-    }
-    res.setHeader('Content-Type', 'text/plain');
-    res.send(data);
-  });
-});
-
-// Update example file
-app.post('/api/example', (req, res) => {
-  try {
-    const { code } = req.body;
-    const filePath = path.join(SHARED_DIR, 'example.js');
-
-    fs.writeFileSync(filePath, code, 'utf8');
-
-    res.setHeader('Content-Type', 'application/json');
-    res.json({
-      success: true,
-      message: 'Code updated successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: `Failed to update code: ${error.message}`
-    });
-  }
-});
-
-// Restart preview server
-app.post('/api/restart-preview', (req, res) => {
-  try {
-    const componentPath = path.join(SHARED_DIR, 'example.js');
-    const success = startPreviewServer(componentPath);
-
-    res.setHeader('Content-Type', 'application/json');
-    if (success) {
-      res.json({
-        success: true,
-        message: `Preview restarted on port ${PREVIEW_PORT}`
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to restart preview server'
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: `Error restarting preview: ${error.message}`
-    });
-  }
-});
-
-// Configuration endpoint
-app.get('/api/config', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.json({
-    previewPort: PREVIEW_PORT,
-    editorPort: EDITOR_PORT,
-    previewUrl: `http://localhost:${PREVIEW_PORT}`
-  });
-});
-
-// Serve the main HTML file for all remaining routes
+// Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Start the server
-server.listen(EDITOR_PORT, () => {
-  console.log(`[INFO] Editor server running on port ${EDITOR_PORT}`);
-  console.log(`[INFO] Preview server running on port ${PREVIEW_PORT}`);
-  console.log(`[INFO] Environment: ${process.env.NODE_ENV || 'development'}`);
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Editor server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Zatrzymaj procesy przy zamknięciu serwera
-process.on('SIGINT', () => {
-  if (previewServerProcess) {
-    previewServerProcess.kill();
-  }
-  process.exit();
-});
-
-process.on('SIGTERM', () => {
-  if (previewServerProcess) {
-    previewServerProcess.kill();
-  }
-  process.exit();
+// Start server
+server.listen(PORT, () => {
+  console.log(`Editor server running on port ${PORT}`);
+  console.log(`Connected to codebase service at: ${CODEBASE_URL}`);
+  console.log(`Connected to preview service at: ${PREVIEW_URL}`);
 });

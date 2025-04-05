@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2025-04-05
+
+### Added
+- Changes in kill.sh
+- Changes in public/favicon.ico
+- Changes in src/components/Console.css
+- Changes in src/components/Editor.css
+- Changes in src/components/FileExplorer.css
+- Changes in src/components/ProjectSelector.css
+- Changes in src/components/index.css
+- Changes in src/css.worker.js
+- Changes in src/editor.worker.js
+- Changes in src/index.css
+
+### Removed
+- Changes in src/config.js
+- Changes in src/config.prod.js
+
 ## [0.1.2] - 2025-04-05
 
 ### Added

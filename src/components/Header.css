@@ -86,3 +86,348 @@
     width: 250px;
     background-color: white;
     border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.session-info {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 12px;
+}
+
+.session-info p {
+    margin: 4px 0;
+}
+
+.session-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background-color: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.session-menu button:hover {
+    background-color: #f5f5f5;
+}
+
+/* ProjectSelector.css */
+.project-selector {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f8f8;
+}
+
+.project-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.project-selector-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.create-button {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background-color: #4caf50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.create-button:hover {
+    background-color: #3e9142;
+}
+
+.project-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    max-height: 200px;
+}
+
+.project-list li {
+    padding: 8px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.project-list li:hover {
+    background-color: #f5f5f5;
+}
+
+.project-list li.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.project-name {
+    font-weight: 500;
+}
+
+.project-date {
+    font-size: 11px;
+    color: #777;
+}
+
+.empty-message {
+    padding: 16px;
+    text-align: center;
+    color: #777;
+    font-style: italic;
+}
+
+.create-project-form {
+    padding: 16px;
+}
+
+.create-project-form input,
+.create-project-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.form-actions button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.form-actions button[type="button"] {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.form-actions button[type="submit"] {
+    background-color: #4caf50;
+    color: white;
+}
+
+/* FileExplorer.css */
+.file-explorer {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.file-explorer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.file-explorer-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.file-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.delete-button {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background-color: #f44336;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-button:hover {
+    background-color: #d32f2f;
+}
+
+.delete-button:disabled {
+    background-color: #ffcdd2;
+    cursor: not-allowed;
+}
+
+.file-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.file-list li {
+    padding: 6px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+}
+
+.file-list li:hover {
+    background-color: #f5f5f5;
+}
+
+.file-list li.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.file-icon, .folder-icon {
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.folder {
+    margin-bottom: 4px;
+}
+
+.folder-header {
+    padding: 6px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.folder-header:hover {
+    background-color: #f5f5f5;
+}
+
+.folder-content {
+    padding-left: 20px;
+    list-style: none;
+}
+
+.create-file-form {
+    padding: 16px;
+}
+
+.create-file-form input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Console.css */
+.console-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #444;
+}
+
+.console-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #eee;
+}
+
+.console-output {
+    flex: 1;
+    padding: 8px 0;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.log-entry {
+    padding: 4px 16px;
+    border-bottom: 1px solid #383838;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.log-entry.info {
+    color: #90caf9;
+}
+
+.log-entry.success {
+    color: #a5d6a7;
+}
+
+.log-entry.warning {
+    color: #ffcc80;
+}
+
+.log-entry.error {
+    color: #ef9a9a;
+}
+
+.log-timestamp {
+    color: #888;
+    margin-right: 6px;
+    font-size: 11px;
+}
+
+.clear-button {
+    background-color: transparent;
+    border: 1px solid #555;
+    color: #ddd;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.clear-button:hover {
+    background-color: #444;
+}

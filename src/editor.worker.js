@@ -1,14 +1,5 @@
-// editor/src/index.js
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App';
-import './index.css';
-
-// Set up Monaco Editor environment
-import * as monaco from 'monaco-editor';
-
-// Configure Monaco Editor workers
-window.MonacoEnvironment = {
+// Update the worker configuration
+self.MonacoEnvironment = {
     getWorkerUrl: function(moduleId, label) {
         if (label === 'json') {
             return './json.worker.js';
@@ -25,14 +16,3 @@ window.MonacoEnvironment = {
         return './editor.worker.js';
     }
 };
-
-// Create root element
-const container = document.getElementById('root');
-const root = createRoot(container);
-
-// Render the app
-root.render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
-);

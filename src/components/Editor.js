@@ -1,130 +1,150 @@
-// src/components/Editor.js
+// editor/src/components/Editor.js
 import React, { useRef, useEffect, useState } from 'react';
 import * as monaco from 'monaco-editor';
+import './Editor.css';
 
-const Editor = ({ value, onChange, language = 'javascript', isLoading = false }) => {
-    const editorContainerRef = useRef(null);
-    const [editorInstance, setEditorInstance] = useState(null);
+const Editor = ({ value, onChange, language = 'javascript', isLoading = false, readOnly = false }) => {
+    const editorRef = useRef(null);
+    const containerRef = useRef(null);
+    const [editor, setEditor] = useState(null);
 
-    const editorOptions = {
-        selectOnLineNumbers: true,
-        roundedSelection: false,
-        readOnly: false,
-        cursorStyle: 'line',
-        automaticLayout: true,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        fontSize: 14,
-        lineNumbers: 'on',
-        tabSize: 2,
-        wordWrap: 'on',
-    };
-
-    // Setup editor on mount
+    // Initialize editor
     useEffect(() => {
-        if (editorContainerRef.current && !editorInstance) {
-            // Configure Monaco
-            monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+        if (containerRef.current && !editor) {
+            // Configure TypeScript compiler options for JSX
+            monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
                 jsx: monaco.languages.typescript.JsxEmit.React,
                 jsxFactory: 'React.createElement',
                 reactNamespace: 'React',
                 allowNonTsExtensions: true,
+                target: monaco.languages.typescript.ScriptTarget.Latest,
                 allowJs: true,
-                target: monaco.languages.typescript.ScriptTarget.Latest
+                moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs
             });
 
-            // Define custom theme
+            // Define a custom theme
             monaco.editor.defineTheme('reactStreamTheme', {
                 base: 'vs-dark',
                 inherit: true,
                 rules: [
                     { token: 'comment', foreground: '6A9955' },
-                    { token: 'string', foreground: 'CE9178' },
                     { token: 'keyword', foreground: '569CD6' },
+                    { token: 'string', foreground: 'CE9178' },
+                    { token: 'number', foreground: 'B5CEA8' },
+                    { token: 'regexp', foreground: 'D16969' },
+                    { token: 'operator', foreground: 'D4D4D4' },
+                    { token: 'delimiter', foreground: 'D4D4D4' },
+                    { token: 'tag', foreground: '569CD6' },
+                    { token: 'attribute.name', foreground: '9CDCFE' },
+                    { token: 'attribute.value', foreground: 'CE9178' }
                 ],
                 colors: {
                     'editor.background': '#1E1E1E',
                     'editor.foreground': '#D4D4D4',
+                    'editorLineNumber.foreground': '#858585',
+                    'editorCursor.foreground': '#AEAFAD',
+                    'editor.selectionBackground': '#264F78',
+                    'editor.inactiveSelectionBackground': '#3A3D41'
                 }
             });
 
-            // Set theme
-            monaco.editor.setTheme('reactStreamTheme');
-
-            // Create editor with initial value (even if empty)
-            const editor = monaco.editor.create(editorContainerRef.current, {
-                ...editorOptions,
+            // Create editor
+            const newEditor = monaco.editor.create(containerRef.current, {
                 value: value || '',
-                language: language,
-                theme: 'reactStreamTheme'
+                language,
+                theme: 'reactStreamTheme',
+                automaticLayout: true,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                fontFamily: 'Fira Code, Consolas, Monaco, monospace',
+                fontSize: 14,
+                lineHeight: 22,
+                tabSize: 2,
+                wordWrap: 'on',
+                wrappingIndent: 'same',
+                readOnly,
+                cursorStyle: 'line',
+                lineNumbers: 'on',
+                renderWhitespace: 'selection',
+                renderIndentGuides: true,
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
+                snippetSuggestions: 'inline',
+                folding: true,
+                formatOnType: true
             });
 
-            // Set focus
-            editor.focus();
+            setEditor(newEditor);
+            editorRef.current = newEditor;
 
-            // Save editor instance
-            setEditorInstance(editor);
-
-            // Cleanup on unmount
+            // Return cleanup function
             return () => {
-                editor.dispose();
+                newEditor.dispose();
             };
         }
-    }, [editorContainerRef]);
+    }, [containerRef]);
 
-    // Update editor value when prop changes
+    // Update editor value when value prop changes
     useEffect(() => {
-        if (editorInstance && value !== undefined && value !== null && editorInstance.getValue() !== value) {
-            editorInstance.setValue(value);
+        if (editor && value !== undefined && editor.getValue() !== value) {
+            editor.setValue(value);
         }
-    }, [value, editorInstance]);
+    }, [value, editor]);
 
-    // Setup change handler
+    // Handle language changes
     useEffect(() => {
-        if (editorInstance && onChange) {
-            const disposable = editorInstance.onDidChangeModelContent(() => {
-                const newValue = editorInstance.getValue();
+        if (editor) {
+            monaco.editor.setModelLanguage(editor.getModel(), language);
+        }
+    }, [language, editor]);
+
+    // Handle read-only changes
+    useEffect(() => {
+        if (editor) {
+            editor.updateOptions({ readOnly });
+        }
+    }, [readOnly, editor]);
+
+    // Set up content change handler
+    useEffect(() => {
+        if (editor && onChange) {
+            const changeHandler = editor.onDidChangeModelContent(() => {
+                const newValue = editor.getValue();
                 onChange(newValue);
             });
 
             return () => {
-                disposable.dispose();
+                changeHandler.dispose();
             };
         }
-    }, [onChange, editorInstance]);
+    }, [editor, onChange]);
 
-    // Update language if it changes
+    // Handle window resize
     useEffect(() => {
-        if (editorInstance) {
-            const model = editorInstance.getModel();
-            if (model) {
-                monaco.editor.setModelLanguage(model, language);
+        const handleResize = () => {
+            if (editor) {
+                editor.layout();
             }
-        }
-    }, [language, editorInstance]);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [editor]);
 
     return (
-        <div style={{ position: 'relative', width: '100%', height: '500px' }}>
+        <div className="editor-container">
             {isLoading && (
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    background: 'rgba(30,30,30,0.7)',
-                    zIndex: 10,
-                    color: 'white'
-                }}>
-                    Loading code...
+                <div className="editor-loading">
+                    <div className="spinner"></div>
+                    <p>Loading editor...</p>
                 </div>
             )}
             <div
-                ref={editorContainerRef}
-                style={{ width: '100%', height: '100%' }}
+                ref={containerRef}
+                className="monaco-editor-container"
+                style={{ opacity: isLoading ? 0.5 : 1 }}
             />
         </div>
     );
