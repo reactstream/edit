@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReactStream Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .preview-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .loading {
+            background-color: #f8f9fa;
+            border-left: 4px solid #6c757d;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .code-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-content {
+            padding: 12px;
+            background-color: #f8f9fa;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #preview {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 200px;
+            background-color: white;
+        }
+
+        .refresh-button {
+            padding: 6px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .refresh-button:hover {
+            background-color: #0069d9;
+        }
+
+        .tab-container {
+            margin-top: 20px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab-button {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .tab-button.active {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-top: none;
+            background-color: white;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Styl dla demonstracyjnego komponentu */
+        .demo-component {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+
+        .demo-title {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .demo-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .demo-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+<div class="preview-container">
+    <h1>ReactStream Preview</h1>
+
+    <div id="status" class="status loading">
+        Oczekiwanie na podgląd komponentu...
+    </div>
+
+    <div class="tab-container">
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab('preview-tab')">Podgląd</button>
+            <button class="tab-button" onclick="openTab('code-tab')">Kod źródłowy</button>
+            <button class="tab-button" onclick="openTab('info-tab')">Informacje</button>
+        </div>
+
+        <div id="preview-tab" class="tab-content active">
+            <div id="preview">
+                <!-- Tu będzie wyświetlany komponent -->
+                <div class="demo-component">
+                    <h2 class="demo-title">Przykładowy komponent</h2>
+                    <p>To jest przykładowy komponent wyświetlany w trybie zastępczym.</p>
+                    <p>Edytuj kod w edytorze i kliknij "Update Preview" aby zobaczyć zmiany.</p>
+                    <div style="margin: 20px 0;">
+                        <button id="counterBtn" class="demo-button">
+                            Licznik: 0
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="code-tab" class="tab-content">
+            <div class="code-container">
+                <div class="code-header">
+                    <span>Kod komponentu</span>
+                    <button class="refresh-button" onclick="loadComponentSource()">Odśwież</button>
+                </div>
+                <pre class="code-content" id="component-code">Ładowanie kodu komponentu...</pre>
+            </div>
+        </div>
+
+        <div id="info-tab" class="tab-content">
+            <h3>Informacje o trybie podglądu</h3>
+            <p>Aktualnie przeglądasz komponent w trybie zastępczym (fallback), ponieważ nie udało się uruchomić pełnego
+                środowiska podglądu React.</p>
+            <p>W tym trybie możesz:</p>
+            <ul>
+                <li>Zobaczyć aktualny kod komponentu</li>
+                <li>Obserwować działanie prostej wersji demonstracyjnej</li>
+                <li>Przetestować podstawowe interakcje</li>
+            </ul>
+            <p>Aby zobaczyć pełną wersję komponentu, upewnij się, że:</p>
+            <ul>
+                <li>Twój kod jest poprawny składniowo</li>
+                <li>Wszystkie wymagane zależności są dostępne</li>
+                <li>Komponent może być wyrenderowany bez błędów</li>
+            </ul>
+            <p><strong>Wskazówka:</strong> Po wprowadzeniu zmian w edytorze, kliknij przycisk "Update Preview" w głównym
+                interfejsie aplikacji, aby zaktualizować podgląd.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Funkcja do aktualizacji statusu
+    function updateStatus(type, message) {
+        const statusEl = document.getElementById('status');
+        statusEl.className = `status ${type}`;
+        statusEl.textContent = message;
+    }
+
+    // Funkcja do przełączania zakładek
+    function openTab(tabName) {
+        // Ukryj wszystkie zakładki
+        const tabContents = document.getElementsByClassName('tab-content');
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove('active');
+        }
+
+        // Usuń aktywną klasę z przycisków
+        const tabButtons = document.getElementsByClassName('tab-button');
+        for (let i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove('active');
+        }
+
+        // Pokaż wybraną zakładkę i aktywuj przycisk
+        document.getElementById(tabName).classList.add('active');
+        document.querySelector(`button[onclick="openTab('${tabName}')"]`).classList.add('active');
+    }
+
+    // Funkcja do ładowania źródła komponentu
+    function loadComponentSource() {
+        const codeEl = document.getElementById('component-code');
+        codeEl.textContent = 'Ładowanie kodu komponentu...';
+
+        fetch('/component-source')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(data => {
+                codeEl.textContent = data;
+                updateStatus('success', 'Kod komponentu załadowany pomyślnie');
+            })
+            .catch(error => {
+                console.error('Error loading component source:', error);
+                codeEl.textContent = 'Błąd ładowania kodu komponentu: ' + error.message;
+                updateStatus('error', 'Błąd ładowania kodu komponentu');
+            });
+    }
+
+    // Tutaj możemy dodać podstawową logikę do wyświetlania komponentu
+    document.addEventListener('DOMContentLoaded', function () {
+        updateStatus('loading', 'Ładowanie komponentu...');
+
+        // Załaduj kod komponentu
+        loadComponentSource();
+
+        // Dodaj prostą interaktywność do przycisku licznika
+        let counter = 0;
+        const counterBtn = document.getElementById('counterBtn');
+        if (counterBtn) {
+            counterBtn.addEventListener('click', function () {
+                counter++;
+                this.textContent = `Licznik: ${counter}`;
+
+                if (counter >= 10) {
+                    updateStatus('success', 'Gratulacje! Osiągnięto 10 kliknięć!');
+                } else {
+                    updateStatus('success', 'Komponent działa w trybie zastępczym');
+                }
+            });
+        }
+
+        // Aktualizuj status po załadowaniu
+        setTimeout(() => {
+            updateStatus('success', 'Komponent załadowany w trybie zastępczym');
+        }, 1000);
+
+        // Odświeżaj kod co 10 sekund
+        setInterval(loadComponentSource, 10000);
+    });
+
+    // Dodaj obserwację zmian w kodzie i automatyczne odświeżanie
+    window.addEventListener('storage', function (e) {
+        if (e.key === 'componentUpdated') {
+            loadComponentSource();
+            updateStatus('info', 'Kod został zaktualizowany');
+        }
+    });
+</script>
+</body>
+</html>
