@@ -1,0 +1,88 @@
+/* editor/src/components/Header.css */
+.main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 56px;
+    background-color: #1e2a3a;
+    color: white;
+    border-bottom: 1px solid #344658;
+}
+
+.logo h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.current-path {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #ddd;
+}
+
+.project-name {
+    font-weight: 500;
+}
+
+.separator {
+    margin: 0 8px;
+}
+
+.file-name {
+    color: #aaa;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.save-button, .session-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.save-button {
+    background-color: #4caf50;
+    color: white;
+}
+
+.save-button:hover {
+    background-color: #3e9142;
+}
+
+.save-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.session-button {
+    background-color: #2196f3;
+    color: white;
+}
+
+.session-button:hover {
+    background-color: #0d8bf2;
+}
+
+.session-menu-container {
+    position: relative;
+}
+
+.session-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 250px;
+    background-color: white;
+    border: 1px solid #e0e0e0;

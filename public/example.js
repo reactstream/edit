@@ -1,4 +1,4 @@
-// src/example.js
+// shared/example.js
 import React, { useState } from 'react';
 
 const MyComponent = () => {
@@ -20,8 +20,8 @@ const MyComponent = () => {
             {isVisible && (
                 <div className="counter-section">
                     <p>Count: {count}</p>
-                    <button onClick={handleIncrement}>
-                        Increment
+                    <button onClick={handleIncrement} >
+                        Incrementewfw w fsd  dfs f fdsfsdfsd fdg dfg dfgdfg
                     </button>
                 </div>
             )}

@@ -1,24 +1,39 @@
-// src/components/Preview.js
+// editor/src/components/Preview.js
 import React, { useEffect, useState } from 'react';
-import config from '../config';
 
-const Preview = ({ port }) => {
+const Preview = ({ port, previewUrl, projectId, filePath }) => {
     const [isLoading, setIsLoading] = useState(true);
 
-    // Zawsze używamy portu z props lub 3010 jako default
-    const previewPort = port || 3010;
+    // Determine the preview URL based on props
+    const getPreviewUrl = () => {
+        if (previewUrl) {
+            return previewUrl;
+        }
 
-    // Create the preview URL
-    const previewUrl = `${config.preview_protocol}://${config.preview_domain}:${previewPort}`;
+        // Default URL with optional projectId and filePath
+        let url = `http://localhost:${port || 3010}`;
+
+        // Add query parameters if projectId and filePath are provided
+        if (projectId) {
+            url += `?projectId=${encodeURIComponent(projectId)}`;
+
+            if (filePath) {
+                url += `&filePath=${encodeURIComponent(filePath)}`;
+            }
+        }
+
+        return url;
+    };
 
     useEffect(() => {
-        // Shorter loading state - just 1 second
+        // Show loading state for 1 second
+        setIsLoading(true);
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, []);
+    }, [port, projectId, filePath]);
 
     return (
         <div className="preview-container" style={{ height: '100%', position: 'relative' }}>
@@ -35,11 +50,11 @@ const Preview = ({ port }) => {
                     background: 'rgba(255,255,255,0.8)',
                     zIndex: 10
                 }}>
-                    Loading preview on port {previewPort}...
+                    Loading preview...
                 </div>
             )}
             <iframe
-                src={previewUrl}
+                src={getPreviewUrl()}
                 title="Component Preview"
                 style={{
                     width: '100%',

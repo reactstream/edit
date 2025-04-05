@@ -1,26 +1,27 @@
-FROM node:16-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
+# Copy package files
+COPY package.json package-lock.json* ./
+
 # Install dependencies
-COPY package*.json ./
 RUN npm install
 
-# Copy application code
-COPY . .
+# Copy source files
+COPY ../docker .
 
-# Install global dependencies
-RUN npm install -g @babel/core @babel/preset-env @babel/preset-react eslint
+# Create logs and temp directories
+RUN mkdir -p logs temp dist
 
-# Create necessary directories
-RUN mkdir -p temp logs components
-
-# Build the application
+# Build the frontend
 RUN npm run build
 
-# Expose ports for the web interface and development server
-# These will be overridden by the environment variables
-EXPOSE 80 3000
+# Create shared directory if it doesn't exist
+RUN mkdir -p ../shared
 
-# Start the application
+# Expose port
+EXPOSE 80
+
+# Start server
 CMD ["node", "server.js"]

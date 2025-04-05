@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2025-04-05
+
+### Added
+- Changes in public/index.html
+- Changes in src/components/FileExplorer.js
+- Changes in src/components/Header.css
+- Changes in src/components/Header.js
+- Changes in src/components/ProjectSelector.js
+- Changes in src/services/api.js
+
+### Changed
+- Changes in Dockerfile
+
+### Removed
+- Changes in docker-compose.yaml
+- Changes in public/preview-fallback.html
+
 ## [0.1.1] - 2025-04-05
 
 ### Added

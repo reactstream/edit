@@ -1,200 +1,315 @@
-// src/App.js
+// editor/src/App.js
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Editor from './components/Editor';
 import Console from './components/Console';
 import Preview from './components/Preview';
+import ProjectSelector from './components/ProjectSelector';
+import FileExplorer from './components/FileExplorer';
+import Header from './components/Header';
+import api from './services/api';
 import './App.css';
 
 function App() {
+    const [currentProject, setCurrentProject] = useState(null);
+    const [currentFile, setCurrentFile] = useState(null);
     const [code, setCode] = useState('');
     const [logs, setLogs] = useState([]);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [previewPort, setPreviewPort] = useState(3010);
     const [isLoading, setIsLoading] = useState(true);
-    const [previewKey, setPreviewKey] = useState(Date.now()); // do wymuszenia przeładowania iframe
+    const [projects, setProjects] = useState([]);
+    const [files, setFiles] = useState([]);
+    const [previewKey, setPreviewKey] = useState(Date.now());
+    const [sessionInfo, setSessionInfo] = useState(null);
 
-    // Fragment do dodania w App.js - lepsza obsługa błędów w fetch
-
+    // Initialize session and load projects
     useEffect(() => {
-        // Ładuj przykładowy kod od razu przy inicjalizacji strony
-        fetch('/api/example')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(data => {
-                setCode(data);
-                setLogs(prev => [...prev, { type: 'info', message: 'Example code loaded successfully' }]);
-                setIsLoading(false); // Kod został załadowany
+        const initialize = async () => {
+            try {
+                // Get current session
+                const sessionResponse = await api.session.getCurrentSession();
+                setSessionInfo(sessionResponse.session);
+                setLogs(prev => [...prev, { type: 'info', message: `Session loaded: ${sessionResponse.session.id}` }]);
 
-                // Upewnij się, że podgląd przykładowego komponentu jest uruchomiony
-                return fetch('/api/restart-preview', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({}) // Pusty obiekt jako body
-                });
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    setLogs(prev => [...prev, { type: 'info', message: data.message }]);
+                // Load projects
+                const projectsResponse = await api.project.getProjects();
+                setProjects(projectsResponse.projects || []);
+
+                // If there are no projects, create a default one
+                if (!projectsResponse.projects || projectsResponse.projects.length === 0) {
+                    const newProject = await api.project.createProject('Default Project', 'A default project created automatically');
+                    setProjects([newProject.project]);
+                    setCurrentProject(newProject.project);
+
+                    // Load files for the new project
+                    const filesResponse = await api.project.getProjectFiles(newProject.project.id);
+                    setFiles(filesResponse.files || []);
+
+                    // Select first file if available
+                    if (filesResponse.files && filesResponse.files.length > 0) {
+                        setCurrentFile(filesResponse.files[0]);
+                        const fileContent = await api.file.getFileContent(newProject.project.id, filesResponse.files[0].path);
+                        setCode(fileContent);
+                    }
                 } else {
-                    setLogs(prev => [...prev, { type: 'error', message: data.message || 'Failed to restart preview' }]);
+                    // Select the first project
+                    setCurrentProject(projectsResponse.projects[0]);
+
+                    // Load files for the selected project
+                    const filesResponse = await api.project.getProjectFiles(projectsResponse.projects[0].id);
+                    setFiles(filesResponse.files || []);
+
+                    // Select first file if available
+                    if (filesResponse.files && filesResponse.files.length > 0) {
+                        setCurrentFile(filesResponse.files[0]);
+                        const fileContent = await api.file.getFileContent(
+                            projectsResponse.projects[0].id,
+                            filesResponse.files[0].path
+                        );
+                        setCode(fileContent);
+                    }
                 }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                setLogs(prev => [...prev, { type: 'error', message: `Error: ${error.message}` }]);
+            } catch (error) {
+                setLogs(prev => [...prev, { type: 'error', message: `Initialization error: ${error.message}` }]);
+            } finally {
                 setIsLoading(false);
-            });
+            }
+        };
 
-        // Dodaj komunikat do konsoli, że używamy portu 3010
-        setLogs(prev => [...prev, { type: 'info', message: 'Preview available on port 3010' }]);
+        initialize();
     }, []);
 
-
-
-    const handleAnalyze = async () => {
-        setIsAnalyzing(true);
-        setLogs(prev => [...prev, { type: 'info', message: 'Analyzing component...' }]);
-
-        try {
-            const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code })
-            });
-
-            const result = await response.json();
-
-            if (result.error) {
-                setLogs(prev => [...prev, { type: 'error', message: result.error }]);
-            } else {
-                setLogs(prev => [...prev, { type: 'success', message: 'Analysis complete!' }]);
-                if (result.output) {
-                    setLogs(prev => [...prev, { type: 'info', message: result.output }]);
-                }
-            }
-        } catch (error) {
-            setLogs(prev => [...prev, { type: 'error', message: `Error: ${error.message}` }]);
-        } finally {
-            setIsAnalyzing(false);
-        }
-    };
-
-    const handleUpdatePreview = async () => {
-        setLogs(prev => [...prev, { type: 'info', message: 'Updating preview...' }]);
-
-        try {
-            const response = await fetch('/api/preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (result.success) {
-                setLogs(prev => [...prev, { type: 'success', message: result.message }]);
-                // Wymuszamy przeładowanie iframe
-                setPreviewKey(Date.now());
-            } else {
-                setLogs(prev => [...prev, { type: 'error', message: result.message || 'Failed to update preview' }]);
-            }
-        } catch (error) {
-            console.error("Error updating preview:", error);
-            setLogs(prev => [...prev, { type: 'error', message: `Error updating preview: ${error.message}` }]);
-        }
-    };
-
-    // Handle socket.io communication
+    // Update files list when current project changes
     useEffect(() => {
-        import('socket.io-client').then(({ io }) => {
-            const socket = io();
+        if (!currentProject) return;
 
-            socket.on('connect', () => {
-                setLogs(prev => [...prev, { type: 'info', message: 'Connected to server' }]);
-            });
+        const loadProjectFiles = async () => {
+            try {
+                const filesResponse = await api.project.getProjectFiles(currentProject.id);
+                setFiles(filesResponse.files || []);
 
-            socket.on('disconnect', () => {
-                setLogs(prev => [...prev, { type: 'warning', message: 'Disconnected from server' }]);
-            });
+                // Clear current file if it doesn't belong to the current project
+                setCurrentFile(null);
+                setCode('');
+            } catch (error) {
+                setLogs(prev => [...prev, { type: 'error', message: `Error loading files: ${error.message}` }]);
+            }
+        };
 
-            socket.on('analysis-result', (data) => {
-                if (data.error) {
-                    setLogs(prev => [...prev, { type: 'error', message: data.error }]);
-                }
-                if (data.output) {
-                    setLogs(prev => [...prev, { type: 'info', message: data.output }]);
-                }
-                setIsAnalyzing(false);
-            });
+        loadProjectFiles();
+    }, [currentProject]);
 
-            socket.on('serve-output', (data) => {
-                if (data.type === 'stdout') {
-                    setLogs(prev => [...prev, { type: 'info', message: data.data }]);
-                } else if (data.type === 'stderr') {
-                    setLogs(prev => [...prev, { type: 'error', message: data.data }]);
-                }
-            });
+    // Load file content when current file changes
+    useEffect(() => {
+        if (!currentProject || !currentFile) return;
 
-            return () => {
-                socket.disconnect();
-            };
-        }).catch(error => {
-            console.error('Failed to load socket.io-client:', error);
-        });
-    }, []);
+        const loadFileContent = async () => {
+            try {
+                const fileContent = await api.file.getFileContent(currentProject.id, currentFile.path);
+                setCode(fileContent);
+                setLogs(prev => [...prev, { type: 'info', message: `File loaded: ${currentFile.path}` }]);
+            } catch (error) {
+                setLogs(prev => [...prev, { type: 'error', message: `Error loading file: ${error.message}` }]);
+            }
+        };
+
+        loadFileContent();
+    }, [currentProject, currentFile]);
+
+    // Handle project selection
+    const handleProjectChange = (project) => {
+        setCurrentProject(project);
+        setLogs(prev => [...prev, { type: 'info', message: `Project selected: ${project.name}` }]);
+    };
+
+    // Handle file selection
+    const handleFileChange = (file) => {
+        setCurrentFile(file);
+    };
+
+    // Handle code changes
+    const handleCodeChange = (newCode) => {
+        setCode(newCode);
+    };
+
+    // Save current file
+    const handleSaveFile = async () => {
+        if (!currentProject || !currentFile) {
+            setLogs(prev => [...prev, { type: 'error', message: 'No file selected' }]);
+            return;
+        }
+
+        try {
+            await api.file.saveFile(
+                currentProject.id,
+                currentFile.path,
+                code,
+                `Update ${currentFile.path}`
+            );
+
+            setLogs(prev => [...prev, { type: 'success', message: `File saved: ${currentFile.path}` }]);
+
+            // Refresh preview
+            setPreviewKey(Date.now());
+        } catch (error) {
+            setLogs(prev => [...prev, { type: 'error', message: `Error saving file: ${error.message}` }]);
+        }
+    };
+
+    // Create a new file
+    const handleCreateFile = async (fileName) => {
+        if (!currentProject) {
+            setLogs(prev => [...prev, { type: 'error', message: 'No project selected' }]);
+            return;
+        }
+
+        try {
+            await api.file.saveFile(
+                currentProject.id,
+                fileName,
+                '// New file',
+                `Create ${fileName}`
+            );
+
+            setLogs(prev => [...prev, { type: 'success', message: `File created: ${fileName}` }]);
+
+            // Refresh file list
+            const filesResponse = await api.project.getProjectFiles(currentProject.id);
+            setFiles(filesResponse.files || []);
+
+            // Select the new file
+            const newFile = filesResponse.files.find(f => f.path === fileName);
+            if (newFile) {
+                setCurrentFile(newFile);
+            }
+        } catch (error) {
+            setLogs(prev => [...prev, { type: 'error', message: `Error creating file: ${error.message}` }]);
+        }
+    };
+
+    // Delete the current file
+    const handleDeleteFile = async () => {
+        if (!currentProject || !currentFile) {
+            setLogs(prev => [...prev, { type: 'error', message: 'No file selected' }]);
+            return;
+        }
+
+        try {
+            await api.file.deleteFile(
+                currentProject.id,
+                currentFile.path,
+                `Delete ${currentFile.path}`
+            );
+
+            setLogs(prev => [...prev, { type: 'success', message: `File deleted: ${currentFile.path}` }]);
+
+            // Refresh file list
+            const filesResponse = await api.project.getProjectFiles(currentProject.id);
+            setFiles(filesResponse.files || []);
+
+            // Clear current file
+            setCurrentFile(null);
+            setCode('');
+        } catch (error) {
+            setLogs(prev => [...prev, { type: 'error', message: `Error deleting file: ${error.message}` }]);
+        }
+    };
+
+    // Create a new project
+    const handleCreateProject = async (name, description) => {
+        try {
+            const newProject = await api.project.createProject(name, description);
+
+            // Add new project to list
+            setProjects(prev => [...prev, newProject.project]);
+
+            // Select the new project
+            setCurrentProject(newProject.project);
+
+            setLogs(prev => [...prev, { type: 'success', message: `Project created: ${name}` }]);
+        } catch (error) {
+            setLogs(prev => [...prev, { type: 'error', message: `Error creating project: ${error.message}` }]);
+        }
+    };
 
     return (
-        <div className="app-container">
-            <header>
-                <h1>ReactStream</h1>
-                <div className="button-group">
-                    <button onClick={handleAnalyze} disabled={isAnalyzing}>
-                        {isAnalyzing ? 'Analyzing...' : 'Analyze Component'}
-                    </button>
-                    <button onClick={handleUpdatePreview}>
-                        Update Preview
-                    </button>
-                </div>
-            </header>
+        <Router>
+            <div className="app-container">
+                <Header
+                    currentProject={currentProject}
+                    currentFile={currentFile}
+                    onSave={handleSaveFile}
+                    sessionInfo={sessionInfo}
+                />
 
-            <div className="main-content">
-                <div className="editor-section">
-                    <h2>Component Editor</h2>
-                    <Editor
-                        value={code}
-                        onChange={setCode}
-                        language="javascript"
-                        isLoading={isLoading}
-                    />
+                <div className="main-content">
+                    <div className="sidebar">
+                        <ProjectSelector
+                            projects={projects}
+                            currentProject={currentProject}
+                            onProjectChange={handleProjectChange}
+                            onCreateProject={handleCreateProject}
+                        />
+
+                        <FileExplorer
+                            files={files}
+                            currentFile={currentFile}
+                            onFileChange={handleFileChange}
+                            onCreateFile={handleCreateFile}
+                            onDeleteFile={handleDeleteFile}
+                        />
+                    </div>
+
+                    <div className="editor-section">
+                        <Editor
+                            value={code}
+                            onChange={handleCodeChange}
+                            language={currentFile ? getLanguageFromFilePath(currentFile.path) : 'javascript'}
+                            isLoading={isLoading}
+                        />
+                    </div>
+
+                    <div className="preview-section">
+                        <Preview
+                            port={3010}
+                            key={previewKey}
+                            projectId={currentProject?.id}
+                            filePath={currentFile?.path}
+                        />
+                    </div>
                 </div>
 
-                <div className="preview-section">
-                    <h2>Preview</h2>
-                    {/* Przekazujemy key, aby wymusić przeładowanie przy zmianie */}
-                    <Preview port={3010} key={previewKey} />
+                <div className="console-section">
+                    <Console logs={logs} />
                 </div>
             </div>
-
-            <div className="console-section">
-                <h2>Console</h2>
-                <Console logs={logs} />
-            </div>
-        </div>
+        </Router>
     );
+}
+
+// Helper function to determine language based on file extension
+function getLanguageFromFilePath(filePath) {
+    if (!filePath) return 'javascript';
+
+    const ext = filePath.split('.').pop().toLowerCase();
+
+    switch (ext) {
+        case 'js':
+        case 'jsx':
+            return 'javascript';
+        case 'ts':
+        case 'tsx':
+            return 'typescript';
+        case 'html':
+            return 'html';
+        case 'css':
+            return 'css';
+        case 'json':
+            return 'json';
+        case 'md':
+            return 'markdown';
+        default:
+            return 'javascript';
+    }
 }
 
 export default App;
